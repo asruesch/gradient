@@ -1,0 +1,174 @@
+library(foreign)
+source("G:/gradient/gradientFunctions.r")
+options(warn=2)
+
+# args = commandArgs(trailingOnly=TRUE)
+# 
+# print(args)
+# 
+# edgeFile = args[1]
+# nodeFile = args[2]
+# shedFile = args[3]
+# nodeRelFile = args[4]
+# relFile = args[5]
+# outCsv = args[6]
+# outDbf = args[7]
+# useSavedEdges = args[8]
+ 
+# edgeFile = "G:/gradient/data/flowlines.dbf" # Milwaukee Data
+edgeFile = "G:/gradient/stateData/flowlines.dbf"
+nodeFile = "G:/gradient/stateData/nodes_rawElev.dbf"
+shedFile = "G:/gradient/stateData/sheds_rawElevMin.csv"
+nodeRelFile = "G:/gradient/relationshipFiles/noderelationships.csv"
+relFile = "G:/gradient/relationshipFiles/relationships.csv"
+# outCsv = "G:/gradient/temp/gradient_milwaukee.csv" # Milwaukee Data
+# outDbf = "G:/gradient/temp/gradient_milwaukee.dbf" # Milwaukee Data
+outShedEdgesFile = "G:/gradient/shedEdges.RData"
+outCsv = "G:/gradient/gradient.csv"
+outDbf = "G:/gradient/gradient.dbf"
+useSavedEdges = TRUE
+
+# edgeCols = c(7,8,10,11) # Milwaukee Data
+edgeCols = c(6,7,9,10)
+
+if (!useSavedEdges) {
+    shedEdges = formatShedEdges(edgeFile
+                                , nodeFile
+                                , shedFile
+                                , nodeRelFile
+                                , relFile
+                                , outShedEdgesFile)
+} else {
+    load(outShedEdgesFile)
+}
+
+# Iterate over outlets
+outlets = which(is.na(shedEdges$TOTRACEID))
+
+print(" ")
+print("Executing gradient-correction algorithm...")
+print(" ")
+for (outlet in outlets) {
+    print(paste("Fixing upstream from REACHID", shedEdges$REACHID[outlet]))
+    outletComplete=FALSE
+    flagHeadwater=FALSE
+    flagConfluence=TRUE
+    row = outlet
+    singleFeature = length(which(shedEdges$TOTRACEID == shedEdges$TRACEID[row])) == 0
+    if (singleFeature) {
+        print(paste(row, shedEdges[row,"seedtype"]))
+        negGrad = shedEdges$maxElevFix1[row] < shedEdges$minElevFix1[row]
+        if (negGrad) {
+            shedEdges[row, c("minElevFix2","maxElevFix2")] = shedEdges[row, "minElevFix2"]
+        } else {
+            shedEdges[row, c("minElevFix2","maxElevFix2")] = shedEdges[row, c("minElevFix1","maxElevFix1")]
+        }
+        shedEdges$elevCheck[row] = 1
+        next
+    }
+    shedEdges$minElevFix2[outlet] = shedEdges$minElevFix1[outlet]
+    while (!outletComplete) {
+        if (flagHeadwater) {
+            flagHeadwater=FALSE
+            flagConfluence=TRUE
+            # Find the next highest drainage area where elevation has not yet been checked
+            notFixed = shedEdges[is.na(shedEdges$elevCheck),]
+            if (nrow(notFixed) == 0) {
+                outletComplete = TRUE
+                next
+            }
+            maxDrainArea = notFixed[which(notFixed$cellCount == max(notFixed$cellCount))[1],]
+            row = which(shedEdges$TRACEID == maxDrainArea$TRACEID)
+        }
+        print(paste(row, shedEdges[row,"seedtype"]))
+        if (is.na(shedEdges$minElevFix2[row])) {
+            negGrad = shedEdges$maxElevFix1[row] < shedEdges$minElevFix1[row]
+        } else {
+            negGrad = shedEdges$maxElevFix1[row] < shedEdges$minElevFix2[row]
+        }
+        if (!negGrad) {
+            is.stream = shedEdges[row, "seedtype"] != "lake"
+            if (is.stream) {
+                shedEdges$maxElevFix2[row] = shedEdges$maxElevFix1[row]
+                if (is.na(shedEdges$minElevFix2[row])) {
+                    shedEdges$minElevFix2[row] = shedEdges$minElevFix1[row]
+                }
+                shedEdges$elevCheck[row] = 1
+                froms = shedEdges[which(shedEdges$TOTRACEID == shedEdges$TRACEID[row]),]
+                # Anchor all minimum elevations of upstream connected nodes
+                if (nrow(froms) > 0) {
+                    shedEdges$minElevFix2[which(shedEdges$TOTRACEID == shedEdges$TRACEID[row])] = shedEdges$maxElevFix2[row]
+                }
+            } else {
+                lakeRows = shedEdges[shedEdges$REACHID == shedEdges$REACHID[row],]
+                if (all(is.na(shedEdges$minElevFix2[which(shedEdges$TRACEID %in% lakeRows$TRACEID)]))) {
+                    shedEdges[which(shedEdges$TRACEID %in% lakeRows$TRACEID),c("minElevFix2", "maxElevFix2")] = shedEdges$minElevFix1[row]
+                } else {
+                    shedEdges[which(shedEdges$TRACEID %in% lakeRows$TRACEID),c("minElevFix2", "maxElevFix2")] = shedEdges$minElevFix2[row]
+                }
+                shedEdges$elevCheck[shedEdges$REACHID == shedEdges$REACHID[row]] = 1
+                froms = shedEdges[which(shedEdges$TOTRACEID %in% lakeRows$TRACEID),]
+                froms = froms[which(froms$REACHID != shedEdges$REACHID[row]),]
+                # Anchor all minimum elevations of upstream connected nodes
+                if (nrow(froms) > 0) {
+                    shedEdges[which(shedEdges$TOTRACEID %in% lakeRows$TRACEID), "minElevFix2"] = shedEdges$minElevFix2[row]
+                }
+            }
+            # Find the row of the next upstream mainstem reach           
+            if (nrow(froms) == 0) { 
+                flagHeadwater = TRUE
+                print("headwater")
+            } else {
+                from = froms[which(froms$cellCount == max(froms$cellCount))[1],]
+                row = which(shedEdges$TRACEID == from$TRACEID)
+            }
+        } else {
+            # If a negative gradient occurs at a confluence, do not select the downstream
+            # segment as the low anchor.
+            if (is.na(shedEdges$TOTRACEID[row])) {
+                lakeImmediatelyDownstream = FALSE
+            } else {
+                lakeImmediatelyDownstream = shedEdges$seedtype[shedEdges$TRACEID == shedEdges$TOTRACEID[row]] %in% c("lake", "dangle")
+            }
+            if (flagConfluence | lakeImmediatelyDownstream) {
+                anchorLow = shedEdges[row,]
+                if (is.na(anchorLow$minElevFix2)) {
+                    anchorLow$minElevFix2 = anchorLow$minElevFix1
+                    shedEdges$minElevFix2[shedEdges$TRACEID == anchorLow$TRACEID] = 
+                        anchorLow$minElevFix1
+                }
+                flagConfluence = FALSE
+            } else {
+                anchorLow = shedEdges[shedEdges$TRACEID == shedEdges$TOTRACEID[row],]
+            }
+            # Find the next segment where the minimum elevation is greater than the low anchor point
+            betweenData = findHighAnchor(shedEdges, anchorLow, row)
+            anchorHigh = betweenData$anchorHigh; interpolationIds = betweenData$interpolationIds
+            shedEdges = interpolateElevations(shedEdges, anchorLow, anchorHigh, interpolationIds)
+            shedEdges$elevCheck[shedEdges$TRACEID %in% interpolationIds] = 1
+            # If the high anchor was irreconcilable, flag it as a headwater so the algorithm skips it
+            # in the next iteration.
+            if (!is.na(shedEdges$elevCheck[which(shedEdges$TRACEID == anchorHigh$TRACEID)])) {
+                shedEdges$elevCheck[shedEdges$TRACEID == anchorHigh$TRACEID] = 1
+                flagHeadwater = TRUE
+                print("headwater")
+            } else {
+                row = which(shedEdges$TRACEID == anchorHigh$TRACEID)
+            }
+        }
+    }
+}
+
+shedEdges[c("minElevFix1", "maxElevFix1", "minElevFix2", "maxElevFix2")] =
+              shedEdges[c("minElevFix1", "maxElevFix1", "minElevFix2", "maxElevFix2")] / 1000
+gradient = ((shedEdges$maxElevFix2 - shedEdges$minElevFix2) / shedEdges$length) * 100
+shedEdges$gradient = gradient
+
+options(scipen=500)
+shedEdges = shedEdges[order(shedEdges$gradient, decreasing=TRUE),]
+shedEdges = shedEdges[c("REACHID", "minElevFix1", "maxElevFix1"
+                        , "minElevFix2", "maxElevFix2","gradient")]
+shedEdges = aggregate(shedEdges[,2:6], list(shedEdges[,1]), mean)
+names(shedEdges) = c("REACHID","minElevRaw","maxElevRaw","minElevFix","maxElevFix","gradient")
+write.dbf(shedEdges, file=outDbf)
+write.csv(shedEdges, file=outCsv, row.names=F, na="")
