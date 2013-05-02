@@ -13,9 +13,8 @@ findLakeTribs = function (shedEdges, froms) {
     }
     tribs = shedEdges[shedEdges$TOTRACEID %in% upstreamLakeRows$TRACEID
         & !(shedEdges$REACHID %in% lakeIDs),] # All tribs of lake
+    return(tribs)
 }
-
-
 
 findHighAnchor = function (shedEdges, anchorLow, row) {
     confluence = shedEdges$TRACEID[row] == anchorLow$TRACEID
@@ -37,22 +36,26 @@ findHighAnchor = function (shedEdges, anchorLow, row) {
             # If yes, find the largest contributor to all TRACEIDs comprising lake
             # by selecting tribs and then re-selecting downstream
             if (all(froms$seedtype %in% c("lake", "dangle"))) {
-                tribs = findLakeTribs(shedEdges,froms) # All tribs of lake
-                if (nrow(tribs) == 0) { # Headwater lake
-                    from = froms
-                    foundHighAnchor = TRUE
-                } else {
-                    from = tribs[which(tribs$cellCount == max(tribs$cellCount))[1],]
-                    # Trace back down to low anchor
-                    upstreamids = from$TRACEID
-                    down = from
-                    while (!(anchorLow$TRACEID %in% upstreamids)) {
-                        down = shedEdges[shedEdges$TRACEID == down$TOTRACEID,]
-                        upstreamids = c(upstreamids, down$TRACEID)
+                from = froms[which(froms$cellCount == max(froms$cellCount))[1],]
+                foundHighAnchor = from$minElevFix1 > anchorLow$minElevFix2
+                if (!foundHighAnchor) {
+                    tribs = findLakeTribs(shedEdges,froms) # All tribs of lake
+                    if (nrow(tribs) == 0) { # Headwater lake
+                        from = froms
+                        foundHighAnchor = TRUE
+                    } else {
+                        from = tribs[which(tribs$cellCount == max(tribs$cellCount))[1],]
+                        # Trace back down to low anchor
+                        upstreamids = from$TRACEID
+                        down = from
+                        while (!(anchorLow$TRACEID %in% upstreamids)) {
+                            down = shedEdges[shedEdges$TRACEID == down$TOTRACEID,]
+                            upstreamids = c(upstreamids, down$TRACEID)
+                        }
+                        # reverse upstreamids excluding the largest contributor (index 1)
+                        upstreamids = upstreamids[length(upstreamids):2]
+                        foundHighAnchor = from$minElevFix1 > anchorLow$minElevFix2
                     }
-                    # reverse upstreamids excluding the largest contributor (index 1)
-                    upstreamids = upstreamids[length(upstreamids):2]
-                    foundHighAnchor = from$minElevFix1 > anchorLow$minElevFix2
                 }
             } else {
                 from = froms[which(froms$cellCount == max(froms$cellCount))[1],]
@@ -101,7 +104,7 @@ interpolateElevations = function (shedEdges, anchorLow, anchorHigh, interpolatio
                 # Anchor min elevation of upstream tribs
                 shedEdges$minElevFix2[which(shedEdges$TOTRACEID==interpolationId)] = maxElev
             } else {
-                reachid = shedEdges$REACHID[shedEdges$TRACEID==interpolationId]
+                reachid = shedEdges$REACHID[which(shedEdges$TRACEID==interpolationId)]
                 lakeRows = shedEdges[shedEdges$REACHID == reachid,]
                 # Anchor min elevations of all lake segments
                 shedEdges[which(shedEdges$REACHID == reachid), c("minElevFix2", "maxElevFix2")] =
@@ -148,7 +151,12 @@ elevProfile=function(up, down, shedEdges, minCol, maxCol){
     return(out)
 }
 
-formatShedEdges = function() {
+formatShedEdges = function(edgeFile
+                           , nodeFile
+                           , shedFile
+                           , nodeRelFile
+                           , relFile
+                           , outShedEdgesFile) {
     #Steps in getting data ready for gradient analysis
     #In GIS
     #1) Extract Values to Points with node points and raw elevation

@@ -1,33 +1,33 @@
 library(foreign)
-root = "~/Documents"
-outShedEdgesFile = "~/Dropbox/gradient/shedEdges.RData", sep="")
-source(paste(root, "/gradient/gradientFunctions.r", sep=""))
+root = "G:/gradient/code"
+outShedEdgesFile = "C:/Users/ruesca/Dropbox/gradient/shedEdges.RData"
+source(paste(root, "/gradientFunctions.r", sep=""))
 options(warn=2)
 
-# args = commandArgs(trailingOnly=TRUE)
-# 
-# print(args)
-# 
-# edgeFile = args[1]
-# nodeFile = args[2]
-# shedFile = args[3]
-# nodeRelFile = args[4]
-# relFile = args[5]
-# outCsv = args[6]
-# outDbf = args[7]
-# useSavedEdges = args[8]
+args = commandArgs(trailingOnly=TRUE)
+
+print(args)
+
+edgeFile = args[1]
+nodeFile = args[2]
+shedFile = args[3]
+nodeRelFile = args[4]
+relFile = args[5]
+outCsv = args[6]
+outDbf = args[7]
+useSavedEdges = as.logical(args[8])
  
-# edgeFile = paste(root, "/gradient/data/flowlines.dbf" # Milwaukee Data
-edgeFile = paste(root, "/gradient/stateData/flowlines.dbf", sep="")
-nodeFile = paste(root, "/gradient/stateData/nodes_rawElev.dbf", sep="")
-shedFile = paste(root, "/gradient/stateData/sheds_rawElevMin.csv", sep="")
-nodeRelFile = paste(root, "/gradient/relationshipFiles/noderelationships.csv", sep="")
-relFile = paste(root, "/gradient/relationshipFiles/relationships.csv", sep="")
-# outCsv = paste(root, "/gradient/temp/gradient_milwaukee.csv", sep="") # Milwaukee Data
-# outDbf = paste(root, "/gradient/temp/gradient_milwaukee.dbf", sep="") # Milwaukee Data
-outCsv = paste(root, "/gradient/gradient.csv", sep="")
-outDbf = paste(root, "/gradient/gradient.dbf", sep="")
-useSavedEdges = TRUE
+# # edgeFile = paste(root, "/data/flowlines.dbf" # Milwaukee Data
+# edgeFile = paste(root, "/stateData/flowlines.dbf", sep="")
+# nodeFile = paste(root, "/stateData/nodes_rawElev.dbf", sep="")
+# shedFile = paste(root, "/stateData/sheds_rawElevMin.csv", sep="")
+# nodeRelFile = paste(root, "/relationshipFiles/noderelationships.csv", sep="")
+# relFile = paste(root, "/relationshipFiles/relationships.csv", sep="")
+# # outCsv = paste(root, "/temp/gradient_milwaukee.csv", sep="") # Milwaukee Data
+# # outDbf = paste(root, "/temp/gradient_milwaukee.dbf", sep="") # Milwaukee Data
+# outCsv = paste(root, "/gradient.csv", sep="")
+# outDbf = paste(root, "/gradient.dbf", sep="")
+# useSavedEdges = TRUE
 
 # edgeCols = c(7,8,10,11) # Milwaukee Data
 edgeCols = c(6,7,9,10)
@@ -112,7 +112,7 @@ for (outlet in outlets) {
                 froms = froms[which(froms$REACHID != shedEdges$REACHID[row]),]
                 # Anchor all minimum elevations of upstream connected nodes
                 if (nrow(froms) > 0) {
-                    shedEdges[which(shedEdges$TOTRACEID %in% lakeRows$TRACEID), "minElevFix2"] = shedEdges$minElevFix2[row]
+                    shedEdges[which(shedEdges$TRACEID %in% froms$TRACEID), "minElevFix2"] = shedEdges$minElevFix2[row]
                 }
             }
             # Find the row of the next upstream mainstem reach           
