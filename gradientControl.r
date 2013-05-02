@@ -1,5 +1,7 @@
 library(foreign)
-source("G:/gradient/gradientFunctions.r")
+root = "~/Documents"
+outShedEdgesFile = "~/Dropbox/gradient/shedEdges.RData", sep="")
+source(paste(root, "/gradient/gradientFunctions.r", sep=""))
 options(warn=2)
 
 # args = commandArgs(trailingOnly=TRUE)
@@ -15,17 +17,16 @@ options(warn=2)
 # outDbf = args[7]
 # useSavedEdges = args[8]
  
-# edgeFile = "G:/gradient/data/flowlines.dbf" # Milwaukee Data
-edgeFile = "G:/gradient/stateData/flowlines.dbf"
-nodeFile = "G:/gradient/stateData/nodes_rawElev.dbf"
-shedFile = "G:/gradient/stateData/sheds_rawElevMin.csv"
-nodeRelFile = "G:/gradient/relationshipFiles/noderelationships.csv"
-relFile = "G:/gradient/relationshipFiles/relationships.csv"
-# outCsv = "G:/gradient/temp/gradient_milwaukee.csv" # Milwaukee Data
-# outDbf = "G:/gradient/temp/gradient_milwaukee.dbf" # Milwaukee Data
-outShedEdgesFile = "G:/gradient/shedEdges.RData"
-outCsv = "G:/gradient/gradient.csv"
-outDbf = "G:/gradient/gradient.dbf"
+# edgeFile = paste(root, "/gradient/data/flowlines.dbf" # Milwaukee Data
+edgeFile = paste(root, "/gradient/stateData/flowlines.dbf", sep="")
+nodeFile = paste(root, "/gradient/stateData/nodes_rawElev.dbf", sep="")
+shedFile = paste(root, "/gradient/stateData/sheds_rawElevMin.csv", sep="")
+nodeRelFile = paste(root, "/gradient/relationshipFiles/noderelationships.csv", sep="")
+relFile = paste(root, "/gradient/relationshipFiles/relationships.csv", sep="")
+# outCsv = paste(root, "/gradient/temp/gradient_milwaukee.csv", sep="") # Milwaukee Data
+# outDbf = paste(root, "/gradient/temp/gradient_milwaukee.dbf", sep="") # Milwaukee Data
+outCsv = paste(root, "/gradient/gradient.csv", sep="")
+outDbf = paste(root, "/gradient/gradient.dbf", sep="")
 useSavedEdges = TRUE
 
 # edgeCols = c(7,8,10,11) # Milwaukee Data
