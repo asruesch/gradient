@@ -81,6 +81,7 @@ for (outlet in outlets) {
             maxDrainArea = notFixed[which(notFixed$cellCount == max(notFixed$cellCount)),]
             # Select the TRACEID that flows into something other than itself (i.e., the downstream-most)
             maxDrainArea = maxDrainArea[!(maxDrainArea$TOTRACEID %in% maxDrainArea$TRACEID),]
+            maxDrainArea = maxDrainArea[1,]
             row = which(shedEdges$TRACEID == maxDrainArea$TRACEID)
         }
         print(paste(row, shedEdges[row,"seedtype"]))
