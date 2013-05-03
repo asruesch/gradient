@@ -1,7 +1,7 @@
 source("G:/gradient/code/gradientFunctions.r")
 
-up = 71237
-down = 482
+up = 93141
+down = 65246
 
 new = elevProfile(up, down, shedEdges, "minElevFix2", "maxElevFix2")
 old = elevProfile(up, down, shedEdges, "minElevFix1", "maxElevFix1")
