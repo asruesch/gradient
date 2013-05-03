@@ -3,31 +3,31 @@ root = "G:/gradient/code"
 outShedEdgesFile = "C:/Users/ruesca/Dropbox/gradient/shedEdges.RData"
 source(paste(root, "/gradientFunctions.r", sep=""))
 options(warn=2)
-
-args = commandArgs(trailingOnly=TRUE)
-
-print(args)
-
-edgeFile = args[1]
-nodeFile = args[2]
-shedFile = args[3]
-nodeRelFile = args[4]
-relFile = args[5]
-outCsv = args[6]
-outDbf = args[7]
-useSavedEdges = as.logical(args[8])
+# 
+# args = commandArgs(trailingOnly=TRUE)
+# 
+# print(args)
+# 
+# edgeFile = args[1]
+# nodeFile = args[2]
+# shedFile = args[3]
+# nodeRelFile = args[4]
+# relFile = args[5]
+# outCsv = args[6]
+# outDbf = args[7]
+# useSavedEdges = as.logical(args[8])
  
-# # edgeFile = paste(root, "/data/flowlines.dbf" # Milwaukee Data
-# edgeFile = paste(root, "/stateData/flowlines.dbf", sep="")
-# nodeFile = paste(root, "/stateData/nodes_rawElev.dbf", sep="")
-# shedFile = paste(root, "/stateData/sheds_rawElevMin.csv", sep="")
-# nodeRelFile = paste(root, "/relationshipFiles/noderelationships.csv", sep="")
-# relFile = paste(root, "/relationshipFiles/relationships.csv", sep="")
-# # outCsv = paste(root, "/temp/gradient_milwaukee.csv", sep="") # Milwaukee Data
-# # outDbf = paste(root, "/temp/gradient_milwaukee.dbf", sep="") # Milwaukee Data
-# outCsv = paste(root, "/gradient.csv", sep="")
-# outDbf = paste(root, "/gradient.dbf", sep="")
-# useSavedEdges = TRUE
+# edgeFile = paste(root, "/data/flowlines.dbf" # Milwaukee Data
+edgeFile = paste(root, "/stateData/flowlines.dbf", sep="")
+nodeFile = paste(root, "/stateData/nodes_rawElev.dbf", sep="")
+shedFile = paste(root, "/stateData/sheds_rawElevMin.csv", sep="")
+nodeRelFile = paste(root, "/relationshipFiles/noderelationships.csv", sep="")
+relFile = paste(root, "/relationshipFiles/relationships.csv", sep="")
+# outCsv = paste(root, "/temp/gradient_milwaukee.csv", sep="") # Milwaukee Data
+# outDbf = paste(root, "/temp/gradient_milwaukee.dbf", sep="") # Milwaukee Data
+outCsv = paste(root, "/gradient.csv", sep="")
+outDbf = paste(root, "/gradient.dbf", sep="")
+useSavedEdges = TRUE
 
 # edgeCols = c(7,8,10,11) # Milwaukee Data
 edgeCols = c(6,7,9,10)
@@ -88,11 +88,17 @@ for (outlet in outlets) {
             negGrad = shedEdges$maxElevFix1[row] < shedEdges$minElevFix2[row]
         }
         if (!negGrad) {
-            is.stream = shedEdges[row, "seedtype"] != "lake"
-            if (is.stream) {
+            to = shedEdges$TOTRACEID[row]
+            if (is.na(to)) {
+                minElev = shedEdges[row, "minElevFix2"]
+            } else {
+                minElev = shedEdges[shedEdges$TRACEID==to,"maxElevFix2"]
+            }
+            is.stream = !(shedEdges[row, "seedtype"] %in% c("lake", "dangle"))
+            if (is.stream) { 
                 shedEdges$maxElevFix2[row] = shedEdges$maxElevFix1[row]
                 if (is.na(shedEdges$minElevFix2[row])) {
-                    shedEdges$minElevFix2[row] = shedEdges$minElevFix1[row]
+                    shedEdges$minElevFix2[row] = minElev
                 }
                 shedEdges$elevCheck[row] = 1
                 froms = shedEdges[which(shedEdges$TOTRACEID == shedEdges$TRACEID[row]),]
@@ -102,17 +108,13 @@ for (outlet in outlets) {
                 }
             } else {
                 lakeRows = shedEdges[shedEdges$REACHID == shedEdges$REACHID[row],]
-                if (all(is.na(shedEdges$minElevFix2[which(shedEdges$TRACEID %in% lakeRows$TRACEID)]))) {
-                    shedEdges[which(shedEdges$TRACEID %in% lakeRows$TRACEID),c("minElevFix2", "maxElevFix2")] = shedEdges$minElevFix1[row]
-                } else {
-                    shedEdges[which(shedEdges$TRACEID %in% lakeRows$TRACEID),c("minElevFix2", "maxElevFix2")] = shedEdges$minElevFix2[row]
-                }
+                shedEdges[which(shedEdges$TRACEID %in% lakeRows$TRACEID),c("minElevFix2", "maxElevFix2")] = minElev
                 shedEdges$elevCheck[shedEdges$REACHID == shedEdges$REACHID[row]] = 1
                 froms = shedEdges[which(shedEdges$TOTRACEID %in% lakeRows$TRACEID),]
                 froms = froms[which(froms$REACHID != shedEdges$REACHID[row]),]
                 # Anchor all minimum elevations of upstream connected nodes
                 if (nrow(froms) > 0) {
-                    shedEdges[which(shedEdges$TRACEID %in% froms$TRACEID), "minElevFix2"] = shedEdges$minElevFix2[row]
+                    shedEdges[which(shedEdges$TRACEID %in% froms$TRACEID), "minElevFix2"] = minElev
                 }
             }
             # Find the row of the next upstream mainstem reach           
@@ -149,8 +151,9 @@ for (outlet in outlets) {
             shedEdges$elevCheck[shedEdges$TRACEID %in% interpolationIds] = 1
             # If the high anchor was irreconcilable, flag it as a headwater so the algorithm skips it
             # in the next iteration.
-            if (!is.na(shedEdges$elevCheck[which(shedEdges$TRACEID == anchorHigh$TRACEID)])) {
-                shedEdges$elevCheck[shedEdges$TRACEID == anchorHigh$TRACEID] = 1
+            highAnchorCheck = shedEdges$elevCheck[which(shedEdges$TRACEID == anchorHigh$TRACEID)]
+            highAnchorChecked = !is.na(highAnchorCheck)
+            if (highAnchorChecked) {
                 flagHeadwater = TRUE
                 print("headwater")
             } else {

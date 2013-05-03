@@ -75,7 +75,7 @@ interpolateElevations = function (shedEdges, anchorLow, anchorHigh, interpolatio
     # Because gradients of lakes are coerced to zero, we only calculate slope
     # over the length of streams in interpolation set
     lStreams = sum(shedEdges[shedEdges$TRACEID %in% interpolationIds
-                             & shedEdges$seedtype != "lake", "length"])
+                             & !(shedEdges$seedtype %in% c("lake", "dangle")), "length"])
     if (anchorHigh$minElevFix1 > anchorLow$minElevFix2) {
         slope = (anchorHigh$minElevFix1 - anchorLow$minElevFix2) / lStreams
     } else if (anchorHigh$maxElevFix1 > anchorLow$minElevFix2) {
@@ -84,40 +84,38 @@ interpolateElevations = function (shedEdges, anchorLow, anchorHigh, interpolatio
         flagIrreconcilable = TRUE
     }
     for (interpolationId in interpolationIds) {
+        updateCols = c("minElevFix2", "maxElevFix2", "elevCheck")
+        updateRow = which(shedEdges$TRACEID==interpolationId)
         if (flagIrreconcilable) {
-            shedEdges$maxElevFix2[which(shedEdges$TRACEID==interpolationId)] = NA
-            shedEdges$minElevFix2[which(shedEdges$TOTRACEID==interpolationId)] = NA
+            shedEdges[updateRow, updateCols] = c(NA, NA, 1)
         } else {
-            is.stream = !(shedEdges[shedEdges$TRACEID==interpolationId, "seedtype"] %in% c("lake", "dangle"))
+            to = shedEdges$TOTRACEID[shedEdges$TRACEID == interpolationId]
+            if (is.na(to)) {
+                minElev = shedEdges[row, "minElevFix2"]
+            } else {
+                minElev = shedEdges[shedEdges$TRACEID==to,"maxElevFix2"]
+            }
+            is.stream = !(shedEdges[updateRow, "seedtype"] %in% c("lake", "dangle"))
             if (is.stream) {
-                l = shedEdges[shedEdges$TRACEID==interpolationId,"length"]
-                to = shedEdges$TOTRACEID[shedEdges$TRACEID == interpolationId]
-                if (is.na(to)) {
-                    minElev = shedEdges[row, "minElevFix2"]
-                } else {
-                    minElev = shedEdges[shedEdges$TRACEID==to,"maxElevFix2"]
-                }
+                l = shedEdges[updateRow,"length"]                
                 maxElev = minElev + (slope * l)
                 # Anchor max elevation
-                shedEdges$maxElevFix2[which(shedEdges$TRACEID==interpolationId)] = maxElev
-                shedEdges$minElevFix2[which(shedEdges$TRACEID==interpolationId)] = minElev
+                shedEdges[updateRow, updateCols] = c(minElev, maxElev, 1)
                 # Anchor min elevation of upstream tribs
                 shedEdges$minElevFix2[which(shedEdges$TOTRACEID==interpolationId)] = maxElev
             } else {
-                reachid = shedEdges$REACHID[which(shedEdges$TRACEID==interpolationId)]
+                reachid = shedEdges$REACHID[updateRow]
                 lakeRows = shedEdges[shedEdges$REACHID == reachid,]
                 # Anchor min elevations of all lake segments
-                shedEdges[which(shedEdges$REACHID == reachid), c("minElevFix2", "maxElevFix2")] =
-                    shedEdges$minElevFix2[which(shedEdges$TRACEID==interpolationId)]
-                shedEdges$elevCheck[which(shedEdges$REACHID == reachid)] = 1
+                shedEdges[which(shedEdges$REACHID == reachid), updateCols] = c(minElev, minElev, 1)
                 # Anchor min elevation of upstream tribs
-                shedEdges$minElevFix2[shedEdges$TOTRACEID %in% lakeRows$TRACEID] =
-                    shedEdges$minElevFix2[which(shedEdges$TRACEID==interpolationId)]
+                shedEdges$minElevFix2[shedEdges$TOTRACEID %in% lakeRows$TRACEID] = minElev
             }
         }
     }
     if (flagIrreconcilable) {
-        shedEdges[which(shedEdges$TRACEID==anchorHigh$TRACEID), c("minElevFix2", "maxElevFix2")] = NA
+        anchorHighRow = which(shedEdges$TRACEID==anchorHigh$TRACEID)
+        shedEdges[anchorHighRow, updateCols] = c(NA, NA, 1)
     }
     return(shedEdges)
 }
@@ -141,7 +139,6 @@ elevProfile=function(up, down, shedEdges, minCol, maxCol){
         atDown = shedEdges$TRACEID[nextrow] == down
         atOutlet = length(nextrow) == 0
         if (atDown | atOutlet) {end = TRUE}
-        print(shedEdges$TRACEID[nextrow])
     }
     out=data.frame(traceids, maxelv, minelv, lengths)
     out$l=NA
