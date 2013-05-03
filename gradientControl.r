@@ -1,33 +1,33 @@
 library(foreign)
-root = "G:/gradient/code"
-outShedEdgesFile = "C:/Users/ruesca/Dropbox/gradient/shedEdges.RData"
+root = "~/Documents/gradient"
+outShedEdgesFile = "~/Dropbox/gradient/shedEdges.RData"
 source(paste(root, "/gradientFunctions.r", sep=""))
 options(warn=2)
 
-args = commandArgs(trailingOnly=TRUE)
-
-print(args)
-
-edgeFile = args[1]
-nodeFile = args[2]
-shedFile = args[3]
-nodeRelFile = args[4]
-relFile = args[5]
-outCsv = args[6]
-outDbf = args[7]
-useSavedEdges = as.logical(args[8])
+# args = commandArgs(trailingOnly=TRUE)
+# 
+# print(args)
+# 
+# edgeFile = args[1]
+# nodeFile = args[2]
+# shedFile = args[3]
+# nodeRelFile = args[4]
+# relFile = args[5]
+# outCsv = args[6]
+# outDbf = args[7]
+# useSavedEdges = as.logical(args[8])
  
-# # edgeFile = paste(root, "/data/flowlines.dbf" # Milwaukee Data
-# edgeFile = paste(root, "/stateData/flowlines.dbf", sep="")
-# nodeFile = paste(root, "/stateData/nodes_rawElev.dbf", sep="")
-# shedFile = paste(root, "/stateData/sheds_rawElevMin.csv", sep="")
-# nodeRelFile = paste(root, "/relationshipFiles/noderelationships.csv", sep="")
-# relFile = paste(root, "/relationshipFiles/relationships.csv", sep="")
-# # outCsv = paste(root, "/temp/gradient_milwaukee.csv", sep="") # Milwaukee Data
-# # outDbf = paste(root, "/temp/gradient_milwaukee.dbf", sep="") # Milwaukee Data
-# outCsv = paste(root, "/gradient.csv", sep="")
-# outDbf = paste(root, "/gradient.dbf", sep="")
-# useSavedEdges = TRUE
+# edgeFile = paste(root, "/data/flowlines.dbf" # Milwaukee Data
+edgeFile = paste(root, "/stateData/flowlines.dbf", sep="")
+nodeFile = paste(root, "/stateData/nodes_rawElev.dbf", sep="")
+shedFile = paste(root, "/stateData/sheds_rawElevMin.csv", sep="")
+nodeRelFile = paste(root, "/relationshipFiles/noderelationships.csv", sep="")
+relFile = paste(root, "/relationshipFiles/relationships.csv", sep="")
+# outCsv = paste(root, "/temp/gradient_milwaukee.csv", sep="") # Milwaukee Data
+# outDbf = paste(root, "/temp/gradient_milwaukee.dbf", sep="") # Milwaukee Data
+outCsv = paste(root, "/gradient.csv", sep="")
+outDbf = paste(root, "/gradient.dbf", sep="")
+useSavedEdges = TRUE
 
 # edgeCols = c(7,8,10,11) # Milwaukee Data
 edgeCols = c(6,7,9,10)
