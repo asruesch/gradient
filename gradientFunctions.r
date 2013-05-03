@@ -240,10 +240,27 @@ formatShedEdges = function(edgeFile
     
     print("Formatting main table...")
     shedEdges = shedEdges[,c("TRACEID", "new_TO", "cellCount", "REACHID", "seedtype", "length", "minElevFix1", "maxElevFix1")]
-    shedEdges[c("minElevFix2", "maxElevFix2", "elevCheck")] = NA
+    shedEdges[c("minElevFix2", "maxElevFix2", "elevCheck", "outlet")] = NA
     names(shedEdges)[2] = "TOTRACEID"
     shedEdges$minElevFix1 = as.integer(round(shedEdges$minElevFix1 * 1000))
     shedEdges$maxElevFix1 = as.integer(round(shedEdges$maxElevFix1 * 1000))
+    # Assign an outlet ID to each feature
+    outlets = which(is.na(shedEdges$TOTRACEID))
+    for (outlet in outlets) {
+        print(outlet)
+        end = FALSE
+        shedEdges$outlet[outlet] = outlet
+        tos = outlet
+        while (!end) {
+            froms = which(shedEdges$TOTRACEID %in% shedEdges$TRACEID[tos])
+            if (length(froms) > 0) {
+                shedEdges$outlet[froms] = outlet
+                tos = froms
+            } else {
+                end = TRUE    
+            }            
+        }
+    }    
     save(shedEdges,file=outShedEdgesFile)
     return(shedEdges)
 }

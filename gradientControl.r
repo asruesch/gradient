@@ -1,9 +1,9 @@
 library(foreign)
-root = "G:/gradient/code"
+root = "G:/gradient"
 outShedEdgesFile = "C:/Users/ruesca/Dropbox/gradient/shedEdges.RData"
-source(paste(root, "/gradientFunctions.r", sep=""))
+source(paste(root, "/code/gradientFunctions.r", sep=""))
 options(warn=2)
-# 
+ 
 # args = commandArgs(trailingOnly=TRUE)
 # 
 # print(args)
@@ -73,7 +73,7 @@ for (outlet in outlets) {
             flagHeadwater=FALSE
             flagConfluence=TRUE
             # Find the next highest drainage area where elevation has not yet been checked
-            notFixed = shedEdges[is.na(shedEdges$elevCheck),]
+            notFixed = shedEdges[is.na(shedEdges$elevCheck) & (shedEdges$outlet == outlet),]
             if (nrow(notFixed) == 0) {
                 outletComplete = TRUE
                 next
