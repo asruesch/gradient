@@ -83,8 +83,8 @@ interpolateElevations = function (shedEdges, anchorLow, anchorHigh, interpolatio
     } else {
         flagIrreconcilable = TRUE
     }
-    for (interpolationId in interpolationIds) {
-        updateCols = c("minElevFix2", "maxElevFix2", "elevCheck")
+    updateCols = c("minElevFix2", "maxElevFix2", "elevCheck")
+    for (interpolationId in interpolationIds) {        
         updateRow = which(shedEdges$TRACEID==interpolationId)
         if (flagIrreconcilable) {
             shedEdges[updateRow, updateCols] = c(NA, NA, 1)
@@ -107,7 +107,9 @@ interpolateElevations = function (shedEdges, anchorLow, anchorHigh, interpolatio
                 reachid = shedEdges$REACHID[updateRow]
                 lakeRows = shedEdges[shedEdges$REACHID == reachid,]
                 # Anchor min elevations of all lake segments
-                shedEdges[which(shedEdges$REACHID == reachid), updateCols] = c(minElev, minElev, 1)
+                shedEdges[which(shedEdges$REACHID == reachid), "minElevFix2"] = minElev
+                shedEdges[which(shedEdges$REACHID == reachid), "maxElevFix2"] = minElev
+                shedEdges[which(shedEdges$REACHID == reachid), updateCols] = 1
                 # Anchor min elevation of upstream tribs
                 shedEdges$minElevFix2[shedEdges$TOTRACEID %in% lakeRows$TRACEID] = minElev
             }
@@ -153,6 +155,7 @@ formatShedEdges = function(edgeFile
                            , shedFile
                            , nodeRelFile
                            , relFile
+                           , damFile
                            , outShedEdgesFile) {
     #Steps in getting data ready for gradient analysis
     #In GIS
@@ -169,18 +172,21 @@ formatShedEdges = function(edgeFile
     #read in node relationships and edge relationships (from main database)
     noderels=read.csv(nodeRelFile)
     rels=read.csv(relFile)
+    dams=read.csv(damFile)
+    
     print("Combining input data...")
     #combine edges with sheds to get minimum elevations for each REACHi
-    edgeMinElev=merge(edges[,edgeCols], sheds, by.x="REACHID", by.y="key", all.x=TRUE)
-    colnames(edgeMinElev)[6]="minElevRaw"
+    edgesDams = merge(edges[,edgeCols], dams)
+    edgeMinElev=merge(edgesDams, sheds, by.x="REACHID", by.y="key", all.x=TRUE)
+    colnames(edgeMinElev)[7]="minElevRaw"
     #get maxElev for features that are sources
     sources=nodes[which(nodes$node_cat=="Source"),c(4:6)]
     sources2=merge(sources[,c(2:3)], noderels[,c(2:3)], by.x="pointid", by.y="fromnode")
     edgeElev=merge(edgeMinElev, sources2, by.x="TRACEID", by.y="TRACEID", all.x=TRUE)
-    colnames(edgeElev)[8]="maxElevRaw"
+    colnames(edgeElev)[9]="maxElevRaw"
     #get to/from info for each segment
     finalEdges=merge(edgeElev, rels[, 2:3], by.x="TRACEID", by.y="FROM_TRACEID", all.x=TRUE)
-    finalEdges=finalEdges[,c(1:6, 8:9)]
+    finalEdges=finalEdges[,c(1:7, 9:10)]
     colnames(finalEdges)[4]="length"
     
     #table needs these columns: TRACEID, REACHID, minElevRaw, maxElevRaw, TO_TRACEID, minElevC1
@@ -239,7 +245,7 @@ formatShedEdges = function(edgeFile
     }
     
     print("Formatting main table...")
-    shedEdges = shedEdges[,c("TRACEID", "new_TO", "cellCount", "REACHID", "seedtype", "length", "minElevFix1", "maxElevFix1")]
+    shedEdges = shedEdges[,c("TRACEID", "new_TO", "DAM", "cellCount", "REACHID", "seedtype", "length", "minElevFix1", "maxElevFix1")]
     shedEdges[c("minElevFix2", "maxElevFix2", "elevCheck", "outlet")] = NA
     names(shedEdges)[2] = "TOTRACEID"
     shedEdges$minElevFix1 = as.integer(round(shedEdges$minElevFix1 * 1000))
@@ -260,7 +266,7 @@ formatShedEdges = function(edgeFile
                 end = TRUE    
             }            
         }
-    }    
+    }
     save(shedEdges,file=outShedEdgesFile)
     return(shedEdges)
 }

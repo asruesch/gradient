@@ -13,9 +13,10 @@ options(warn=2)
 # shedFile = args[3]
 # nodeRelFile = args[4]
 # relFile = args[5]
-# outCsv = args[6]
-# outDbf = args[7]
-# useSavedEdges = as.logical(args[8])
+# damFile = args[6]
+# outCsv = args[7]
+# outDbf = args[8]
+# useSavedEdges = as.logical(args[9])
  
 # edgeFile = paste(root, "/data/flowlines.dbf" # Milwaukee Data
 edgeFile = paste(root, "/stateData/flowlines.dbf", sep="")
@@ -23,6 +24,7 @@ nodeFile = paste(root, "/stateData/nodes_rawElev.dbf", sep="")
 shedFile = paste(root, "/stateData/sheds_rawElevMin.csv", sep="")
 nodeRelFile = paste(root, "/relationshipFiles/noderelationships.csv", sep="")
 relFile = paste(root, "/relationshipFiles/relationships.csv", sep="")
+damFile = paste(root, "/stateData/dams.csv", sep="")
 # outCsv = paste(root, "/temp/gradient_milwaukee.csv", sep="") # Milwaukee Data
 # outDbf = paste(root, "/temp/gradient_milwaukee.dbf", sep="") # Milwaukee Data
 outCsv = paste(root, "/gradient.csv", sep="")
@@ -38,6 +40,7 @@ if (!useSavedEdges) {
                                 , shedFile
                                 , nodeRelFile
                                 , relFile
+                                , damFile
                                 , outShedEdgesFile)
 } else {
     load(outShedEdgesFile)
@@ -110,6 +113,23 @@ for (outlet in outlets) {
                     shedEdges$minElevFix2[which(shedEdges$TOTRACEID == shedEdges$TRACEID[row])] = shedEdges$maxElevFix2[row]
                 }
             } else {
+                # Define existence of dam as a feature with a dam on it, or having a downstream feature with a dam on it
+                if (is.na(to)) {
+                    damBool = shedEdges$DAM[row]
+                } else {
+                    damBool = shedEdges$DAM[row] | shedEdges$DAM[shedEdges$TRACEID == to]
+                }
+                
+                # If a reservoir exists, we must use the raw elevation
+                # Otherwise, minumum elevations will propogate due to 
+                # lake gradients being coerced to zero.
+                if (damBool) {
+                    # First, check if raw gradient is negative
+                    rawNegBool = shedEdges$minElevFix1[row] > shedEdges$maxElevFix1[row]
+                    if (!rawNegBool) {
+                        minElev = shedEdges$minElevFix1[row]
+                    }
+                }
                 lakeRows = shedEdges[shedEdges$REACHID == shedEdges$REACHID[row],]
                 shedEdges[which(shedEdges$TRACEID %in% lakeRows$TRACEID),c("minElevFix2", "maxElevFix2")] = minElev
                 shedEdges$elevCheck[shedEdges$REACHID == shedEdges$REACHID[row]] = 1
