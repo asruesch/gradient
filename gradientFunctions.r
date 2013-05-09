@@ -151,6 +151,7 @@ elevProfile=function(up, down, shedEdges, minCol, maxCol){
 }
 
 formatShedEdges = function(edgeFile
+                           , edgeCols
                            , nodeFile
                            , shedFile
                            , nodeRelFile
@@ -226,7 +227,7 @@ formatShedEdges = function(edgeFile
     
     #rectify values at confluences
     print("Rectifying elevations at confluences...")
-    shedEdges$minElevFix1=shedEdges$minElevRaw #create column to store new elevations
+    shedEdges$minElevFix1=shedEdges$minElevRaw # Create column to store new elevations
     to_freq=as.data.frame(table(shedEdges$new_TO)) 
     confluence=subset(to_freq, to_freq$Freq>1) #select out features that more than one feature goes to
     for (v in 1:nrow(confluence)){

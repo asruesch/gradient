@@ -1,6 +1,7 @@
 library(foreign)
 root = "G:/gradient"
 outShedEdgesFile = "C:/Users/ruesca/Dropbox/gradient/shedEdges.RData"
+# outShedEdgesFile = "C:/Users/ruesca/Dropbox/gradient/shedEdges_milwaukee.RData" # Milwaukee Data
 source(paste(root, "/code/gradientFunctions.r", sep=""))
 options(warn=2)
  
@@ -18,7 +19,7 @@ options(warn=2)
 # outDbf = args[8]
 # useSavedEdges = as.logical(args[9])
  
-# edgeFile = paste(root, "/data/flowlines.dbf" # Milwaukee Data
+# edgeFile = paste(root, "/data/flowlines.dbf", sep="") # Milwaukee Data
 edgeFile = paste(root, "/stateData/flowlines.dbf", sep="")
 nodeFile = paste(root, "/stateData/nodes_rawElev.dbf", sep="")
 shedFile = paste(root, "/stateData/sheds_rawElevMin.csv", sep="")
@@ -36,6 +37,7 @@ edgeCols = c(6,7,9,10)
 
 if (!useSavedEdges) {
     shedEdges = formatShedEdges(edgeFile
+                                , edgeCols
                                 , nodeFile
                                 , shedFile
                                 , nodeRelFile
@@ -89,10 +91,9 @@ for (outlet in outlets) {
         }
         print(paste(row, shedEdges[row,"seedtype"]))
         if (is.na(shedEdges$minElevFix2[row])) {
-            negGrad = shedEdges$maxElevFix1[row] < shedEdges$minElevFix1[row]
-        } else {
-            negGrad = shedEdges$maxElevFix1[row] < shedEdges$minElevFix2[row]
+            shedEdges$minElevFix2[row] = shedEdges$minElevFix1[row]
         }
+        negGrad = shedEdges$maxElevFix1[row] < shedEdges$minElevFix2[row]
         if (!negGrad) {
             to = shedEdges$TOTRACEID[row]
             if (is.na(to)) {
@@ -118,8 +119,7 @@ for (outlet in outlets) {
                     damBool = shedEdges$DAM[row]
                 } else {
                     damBool = shedEdges$DAM[row] | shedEdges$DAM[shedEdges$TRACEID == to]
-                }
-                
+                }                
                 # If a reservoir exists, we must use the raw elevation
                 # Otherwise, minumum elevations will propogate due to 
                 # lake gradients being coerced to zero.
@@ -185,6 +185,7 @@ for (outlet in outlets) {
         }
     }
 }
+
 recovery=shedEdges
 shedEdges[c("minElevFix1", "maxElevFix1", "minElevFix2", "maxElevFix2")] =
               shedEdges[c("minElevFix1", "maxElevFix1", "minElevFix2", "maxElevFix2")] / 1000
