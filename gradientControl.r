@@ -185,7 +185,7 @@ for (outlet in outlets) {
         }
     }
 }
-
+recovery=shedEdges
 shedEdges[c("minElevFix1", "maxElevFix1", "minElevFix2", "maxElevFix2")] =
               shedEdges[c("minElevFix1", "maxElevFix1", "minElevFix2", "maxElevFix2")] / 1000
 gradient = ((shedEdges$maxElevFix2 - shedEdges$minElevFix2) / shedEdges$length) * 100

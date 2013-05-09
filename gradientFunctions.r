@@ -109,7 +109,7 @@ interpolateElevations = function (shedEdges, anchorLow, anchorHigh, interpolatio
                 # Anchor min elevations of all lake segments
                 shedEdges[which(shedEdges$REACHID == reachid), "minElevFix2"] = minElev
                 shedEdges[which(shedEdges$REACHID == reachid), "maxElevFix2"] = minElev
-                shedEdges[which(shedEdges$REACHID == reachid), updateCols] = 1
+                shedEdges[which(shedEdges$REACHID == reachid), "elevCheck"] = 1
                 # Anchor min elevation of upstream tribs
                 shedEdges$minElevFix2[shedEdges$TOTRACEID %in% lakeRows$TRACEID] = minElev
             }
